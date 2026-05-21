@@ -97,3 +97,45 @@ body {
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
+
+/* Kakao Map Dark GIS styling filter */
+.dark-gis-map {
+  filter: invert(93%) hue-rotate(190deg) brightness(85%) contrast(100%);
+  background-color: #0b0f19 !important;
+}
+
+/* Glowing orange animation for AI report border */
+@keyframes borderGlow {
+  0%, 100% {
+    border-color: rgba(249, 115, 22, 0.4);
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.15);
+  }
+  50% {
+    border-color: rgba(249, 115, 22, 0.95);
+    box-shadow: 0 0 18px rgba(249, 115, 22, 0.45);
+  }
+}
+
+.animate-glow-orange {
+  animation: borderGlow 2.5s infinite ease-in-out;
+}
+
+/* Custom dark scrollbar for dark mode */
+.dark-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+

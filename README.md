@@ -1,80 +1,45 @@
-# 🛡️ Room NPS: Real-time Housing Safety Diagnostic System
-> **2026 Mokpo National University Capstone Design Project** <br>
-> **국토교통부 실거래가 & 공공데이터 통합 기반 자취방/전세 안심 진단 플랫폼 및 AI 법률 리포트**
-
-<p align="left">
-  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=React&logoColor=black"/>
-  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=Vite&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=Flask&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=Python&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Kakao_Maps-FFCD00?style=for-the-badge&logo=Kakao&logoColor=black"/>
-  <img src="https://img.shields.io/badge/Llama_3-0466C8?style=for-the-badge&logo=Meta&logoColor=white"/>
-</p>
+# 🌡️ Safe-Ro: Real-time Heatwave Housing Safety Diagnostic System
+**2026 Mokpo National University Capstone Design Project**  
+기후 재난(폭염/도시열섬) 주거 취약성 종합 안전 진단 대시보드 및 AI 복지 정책 리포트
 
 ---
 
 ## 📋 1. Project Overview (프로젝트 개요)
-**Room NPS**는 대학생 및 사회초년생의 주거 정보 비대칭 및 전세사기 문제를 해결하기 위한 **지능형 안심 진단 시스템**입니다. 국토교통부의 실거래가 API와 최신 공공데이터(건축물대장, 공시지가, 범죄예방지도)를 실시간으로 매칭하여 매물의 경제적·건축적 안전성을 수치화된 **NPS(안심 점수)**로 제공하며, LLM 기반의 맞춤형 법률 리포트를 자동 생성합니다.
-
----
+Safe-Ro는 심각해지는 기후 변화와 폭염 속에서 주거 취약계층(고령자, 독거노인 등)의 안전을 지키기 위한 지능형 안심 진단 시스템입니다. 기상청 실시간 기후 데이터와 국토교통부 건축물대장, 통계청 인구 데이터를 융합하여 해당 행정동의 **폭염 주거 위험도(Risk Score)**를 0~100점 수치로 시각화하며, LLM 기반의 지자체 맞춤형 AI 폭염 대비 정책 리포트를 자동 생성합니다.
 
 ## 🔗 2. Integrated Data Pipeline (데이터 통합 전략)
-본 프로젝트는 **총 8종의 국가 공공데이터 API**를 결합하여 데이터의 신뢰성과 커버리지를 극대화했습니다.
+본 프로젝트는 다양한 형태의 국가 공공데이터 및 통계 데이터를 실시간으로 결합하여 폭염 취약성 분석의 신뢰성을 극대화했습니다.
 
 ### 📊 Real-time Data Source
-| Category | API Source | Key Insights |
-| :--- | :--- | :--- |
-| **Real Estate** | **국토교통부 실거래가 (4종 통합)** | 아파트, 오피스텔, 연립다세대, 단독다가구 매매/전월세 시세 통합 분석 |
-| **Building** | **건축HUB 건축물대장** | 위반건축물 여부, 노후도(사용승인일), 주차 대수 등 결격 사유 검증 |
-| **Security** | **생활안전지도 (Safemap WMS)** | 반경 내 범죄주의구간 등급 산출 및 실시간 히트맵 오버레이 |
-| **Valuation** | **국토교통부 / VWorld** | 필지별 공시지가 조회를 통한 적정 전세가율 및 HUG 보증보험 요건 검증 |
-| **Geospatial** | **Kakao Maps API** | 법정동 코드 기반 위치 시각화 및 주변 인프라(역세권 등) 매핑 |
-
----
+| Category | API Source / Data | Key Insights |
+|---|---|---|
+| Climate | 기상청 방재기상관측(AWS) API | 해당 지역 최인접 관측소의 여름철 최고 기온, 폭염 일수, 열대야 일수 실시간 분석 |
+| Building | 국토교통부 건축HUB 건축물대장 | 건축물 노후도(사용승인일), 지붕 구조, 주건축물 구조 등 주거 환경의 열 취약성 검증 |
+| Population | 통계청 KOSIS 데이터 (CSV) | 읍면동 단위 65세 이상 고령자 비율 및 독거노인 밀집도 매칭을 통한 사회적 취약계층 분석 |
+| Geospatial | Kakao Maps API & Kostat GeoJSON | 전국 3,500여 개 읍면동 경계 매핑 및 거리 기반 그라데이션 폭염 위험도 히트맵 렌더링 |
+| AI / LLM | NVIDIA NIM / OpenAI API | 취약성 지표(기후, 건축, 인구) 기반 지자체용 복지/대피소 확충 AI 리포트 생성 |
 
 ## 🖥️ 3. Main Features (핵심 기능)
-- **Housing NPS Engine**: 전세가율, 노후도, 치안 인프라, 위반건축물 여부를 종합 분석해 0~100점의 안심 점수를 산출합니다.
-- **AI Legal Diagnostic Report**: NVIDIA NIM (LLAMA3-70B)과 `주택임대차보호법`을 결합한 RAG 시스템으로, 해당 매물의 전세가율과 위반 여부를 인용한 맞춤형 임차인 권리 분석 리포트를 제공합니다.
-- **Interactive Map Dashboard**: 주거 형태(아파트/오피스텔/빌라) 실시간 필터링 및 지도를 통한 실거래 내역 즉시 조회 UI를 구현했습니다.
-- **Safe-Fallback System**: 공공데이터 서버 불안정 시 지오코딩 로컬 캐싱 및 인근 표준 데이터를 활용한 지능형 추론 로직을 탑재했습니다.
+- **Heatwave Risk Engine**: 폭염 기온(기후), 건축물 노후도(환경), 독거노인 비율(인구)의 3차원 데이터를 가중치 기반으로 종합 분석하여 최종 폭염 위험도를 산출합니다.
+- **AI Welfare Policy Report**: 분석된 지역 특성(예: "노후 주택 70% 이상, 독거노인 밀집")을 LLM에 주입하여, 무더위 쉼터 배치, 방문 간호 인력 보충 등 실질적이고 구체적인 행정 정책 리포트를 생성합니다.
+- **Interactive Nationwide Heatmap**: 카카오 맵(Kakao Map) 위에 전국 읍면동 폴리곤을 렌더링하고, 선택 지역을 중심으로 거리에 비례하여 위험도가 퍼져나가는 인터랙티브 그라데이션 히트맵을 구현했습니다.
+- **Real-time Filter & Dashboard**: UI 슬라이더를 통해 위험도(Risk Filter) 기준에 미달하는 안전 지역을 지도에서 숨기거나, 실시간으로 통계치(인포그래픽)를 확인하는 다이내믹 대시보드를 제공합니다.
 
----
-
-## 📊 4. Data Science & Model Analysis
-본 프로젝트는 단순한 UI 구현을 넘어, 5,000건 이상의 가상/실제 부동산 데이터를 바탕으로 딥러닝 기반의 안심 점수(NPS) 추론 모델을 설계하고 검증했습니다.
-
-### 📈 모델 학습 결과 (Training Results)
-- **Feature Importance**: 위반건축물 여부(0.35)와 전세가율(0.28)이 주거 안전성의 핵심 결정 요인임을 데이터로 입증했습니다.
-- **Model Accuracy**: 실제 규칙 기반 점수와 AI 예측 점수 간의 높은 일치율(Calibration)을 확인했습니다.
-
-<p align="center">
-  <img src="image/feature_importance_premium.png" width="45%">
-  <img src="image/impact_analysis_premium.png" width="45%">
-</p>
-
----
-
-## 📂 5. Project Structure (폴더 구조)
+## 📂 4. Project Structure (폴더 구조)
 ```text
-Room_NPS/
-├── frontend/               # [Frontend] React + Vite + Tailwind CSS
-├── image/          # [Results] 시스템 스크린샷 및 데이터 분석 시각화 결과물 (5장)
-├── notebooks/      # [Analysis] NPS 점수 예측 ML 모델 학습 및 EDA 실험 코드 (.ipynb)
+Safe-Ro/
+├── frontend/               # [Frontend] React + Vite + Tailwind CSS + Kakao Map API
 ├── venv/                   # [Backend] Python 가상환경
-├── app.py                  # [Server] Flask API 및 다중 공공데이터 병렬 처리 엔진
-├── 주택임대차보호법.TXT       # [Data] LLM RAG 기반 법률 리포트 생성용 컨텍스트
-├── requirements.txt        # [Python] 의존성 라이브러리 목록
+├── app.py                  # [Server] Flask API 및 공공데이터(기상청, 국토부) 병렬 처리 엔진
+├── download.py             # [Script] 전국 단위 대용량 GeoJSON 데이터 파싱 및 다운로드 스크립트
+├── requirements.txt        # [Python] 의존성 라이브러리 목록 (Flask, Pandas, OpenAI 등)
 ├── .env                    # [Security] API 키 관리 (Git 제외)
-├── .gitignore              # [Git] 불필요한 파일 제외 설정
+├── .gitignore              # [Git] 불필요한 파일(캐시, 가상환경 등) 제외 설정
 └── README.md               # [Docs] 프로젝트 기술 문서
 ```
 
----
-
-## 📂 6. Getting Started(시작하기)
-
+## 📂 5. Getting Started (시작하기)
 ### 🛠️ Step 1. Environment Setup (환경 설정)
-
 ```bash
 # 가상환경 활성화 및 라이브러리 설치
 python -m venv venv
@@ -83,13 +48,18 @@ pip install -r requirements.txt
 ```
 
 ### 🏃 Step 2. Run Application (실행)
-백엔드 서버와 프론트엔드 개발 서버를 각각 실행합니다.
+먼저 전국 행정동 지형 데이터(GeoJSON)를 준비한 후, 백엔드와 프론트엔드를 각각 실행합니다.
 
-### [Backend 실행]
+**[GeoJSON 다운로드 및 Backend 실행]**
 ```bash
+# 1. 원본 지도 데이터 다운로드 (최초 1회 필수)
+python download.py
+
+# 2. Flask 서버 실행
 python app.py
 ```
-### [Frontend 실행]
+
+**[Frontend 실행]**
 ```bash
 cd frontend
 npm install

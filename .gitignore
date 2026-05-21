@@ -1,22 +1,16 @@
-# Python 관련
+# Environments
 venv/
-.venv/
+.env
+
+# Python caches
 __pycache__/
 *.pyc
 
-# Node/Frontend 관련
+# Node
 node_modules/
 dist/
-.vite/
-node-v20.11.0-win-x64/
 
-# 보안 및 환경 변수 (절대 금지)
-.env
-
-# 운영체제 관련
+# System
 .DS_Store
-Thumbs.db
-
+*.log
 geocoding_cache.json
-*.zip
-scratch/
