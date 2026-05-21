@@ -1,11 +1,11 @@
 # 🌡️ Safe-Ro: Real-time Heatwave Housing Safety Diagnostic System
-**2026 Mokpo National University Capstone Design Project**  
+<img width="1877" height="927" alt="image" src="https://github.com/user-attachments/assets/0a37a8cf-f985-49a7-9e33-07f4026e148c" />
 기후 재난(폭염/도시열섬) 주거 취약성 종합 안전 진단 대시보드 및 AI 복지 정책 리포트
 
 ---
 
 ## 📋 1. Project Overview (프로젝트 개요)
-Safe-Ro는 심각해지는 기후 변화와 폭염 속에서 주거 취약계층(고령자, 독거노인 등)의 안전을 지키기 위한 지능형 안심 진단 시스템입니다. 기상청 실시간 기후 데이터와 국토교통부 건축물대장, 통계청 인구 데이터를 융합하여 해당 행정동의 **폭염 주거 위험도(Risk Score)**를 0~100점 수치로 시각화하며, LLM 기반의 지자체 맞춤형 AI 폭염 대비 정책 리포트를 자동 생성합니다.
+Safe-Ro는 심각해지는 기후 변화와 폭염 속에서 주거 취약계층(고령자, 독거노인 등)의 안전을 지키기 위한 지능형 안심 진단 시스템입니다. 기상청 실시간 기후 데이터와 국토교통부 건축물대장, 통계청 인구 데이터를 융합하여 해당 행정동의 폭염 주거 위험도(Risk Score)를 0~100점 수치로 시각화하며, LLM 기반의 지자체 맞춤형 AI 폭염 대비 정책 리포트를 자동 생성합니다.
 
 ## 🔗 2. Integrated Data Pipeline (데이터 통합 전략)
 본 프로젝트는 다양한 형태의 국가 공공데이터 및 통계 데이터를 실시간으로 결합하여 폭염 취약성 분석의 신뢰성을 극대화했습니다.
