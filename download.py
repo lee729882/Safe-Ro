@@ -2,7 +2,7 @@ import urllib.request
 import os
 import shutil
 
-dest = r"d:\Safe-Ro\frontend\public\dongs.json"
+dest = os.path.join(os.path.dirname(__file__), "frontend", "public", "dongs.json")
 url = "https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2013/json/skorea_submunicipalities_geo_simple.json"
 
 try:

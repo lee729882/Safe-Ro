@@ -28,7 +28,7 @@ import shutil
 # --- GeoJSON 준비 ---
 def prepare_geojson():
     import urllib.request
-    dest = r"d:\Safe-Ro\frontend\public\dongs.json"
+    dest = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend", "public", "dongs.json"))
     # 파일이 없거나 너무 작으면(잘린 파일) 다시 다운로드
     if not os.path.exists(dest) or os.path.getsize(dest) < 1000000:
         try:
@@ -177,7 +177,9 @@ load_geo_cache()
 # ── NVIDIA NIM / OpenAI 클라이언트 설정 ──
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key=os.getenv("NVIDIA_API_KEY")
+    api_key=os.getenv("NVIDIA_API_KEY"),
+    timeout=120.0,     # 실측 기준 응답에 76~81초 소요 → 120초로 여유 확보
+    max_retries=0      # 자동 재시도 비활성화 (재시도가 더 긴 대기 유발)
 )
 
 
@@ -399,27 +401,36 @@ AWS_STATION_MAP = {
 
 # 지역명 → 관측소 코드 추출 (시/구/동 중 시 레벨 매칭)
 # 지역명 → 관측소 코드 추출 (더 이상 사용하지 않지만 하위 호환성을 위해 유지하거나 제거 가능, 새 로직은 함수 내부 포함)
-def fetch_heatwave_data(region_name):
+def fetch_heatwave_data(region_name, time_range="2025 July"):
     """
     기상청 API Hub를 호출하여 특정 지역의 '일 최고기온'과 '폭염 일수'를 가져옵니다.
-    응답 형식(Text)을 파싱하여 여름(6~9월) 동안의 데이터를 추출합니다.
+    응답 형식(Text)을 파싱하여 여름(6~9월) 또는 지정된 시간 범위의 데이터를 추출합니다.
     """
-    # 1. 나주시 행정동에 따른 AWS 관측소 번호(stn) 매핑
-    stn_map = {"남평읍": 252, "빛가람동": 266, "영산동": 268, "기본": 252}
-    
-    stn_id = stn_map.get("기본")
-    for key, val in stn_map.items():
-        if key != "기본" and key in region_name:
+    # 1. 파일 상단의 AWS_STATION_MAP을 사용하여 region_name에 매칭되는 관측소 코드 탐색
+    stn_id = 129  # 기본값: 세종(129)
+    for key, val in AWS_STATION_MAP.items():
+        if key in region_name:
             stn_id = val
             break
 
     # 2. 기상청 API 호출 설정
     if KMA_API_KEY:
         try:
+            if time_range == "2024 July":
+                tm1, tm2 = "20240701", "20240731"
+            elif time_range == "2024 August":
+                tm1, tm2 = "20240801", "20240831"
+            elif time_range == "2025 July":
+                tm1, tm2 = "20250701", "20250731"
+            elif time_range == "2025 August":
+                tm1, tm2 = "20250801", "20250831"
+            else:
+                tm1, tm2 = "20250601", "20250930"
+
             url = "https://apihub.kma.go.kr/api/typ01/url/sfc_aws_day.php"
             params = {
-                "tm1": "20250601",
-                "tm2": "20250930",
+                "tm1": tm1,
+                "tm2": tm2,
                 "obs": "ta_max",
                 "stn": stn_id,
                 "help": "0",
@@ -837,7 +848,7 @@ def generate_ai_report():
 
     try:
         completion = client.chat.completions.create(
-            model="meta/llama-3.1-70b-instruct",
+            model="meta/llama-3.3-70b-instruct",  # 3.1보다 ~5초 빠름 (실측: 76s vs 81s)
             messages=[
                 {
                     "role": "system",
@@ -858,7 +869,11 @@ def generate_ai_report():
         return jsonify({"report": report})
     except Exception as e:
         log.error(f"[AI-REPORT ERROR] {e}")
-        return jsonify({"error": str(e)}), 500
+        # 504/타임아웃 에러는 재시도 없이 즉시 503 반환하여 프론트엔드가 빠르게 오류 표시
+        err_str = str(e)
+        if "504" in err_str or "timeout" in err_str.lower() or "timed out" in err_str.lower():
+            return jsonify({"error": "AI 서버 응답 지연 (최대 2분 소요). 잠시 후 다시 시도해 주세요."}), 503
+        return jsonify({"error": err_str}), 500
 
 
 # =============================================================
@@ -876,6 +891,10 @@ def heatwave_analyze():
       4. calculate_heatwave_risk_index() → 위험도 지수 산출
       5. 종합 결과 JSON 반환
     """
+    # bun 파싱 실패(0000) 시 region_name 기반 fallback 주소
+    DONG_FALLBACK_BUN = {
+        "어진동": {"bun":  "0664", "ji": "0000"},
+    }
     try:
         data        = request.json
         bjd_code    = data.get('code', '')
@@ -887,13 +906,23 @@ def heatwave_analyze():
         lat         = float(data.get('lat', 37.5))
         lng         = float(data.get('lng', 127.0))
         region_name = data.get('regionName', '서울')
+        time_range  = data.get('timeRange', '2025 July')
+
+        # bun이 "0000"일 때 region_name 기반 fallback 적용
+        if target_bun == "0000":
+            for key, val in DONG_FALLBACK_BUN.items():
+                if key in region_name:
+                    target_bun = val["bun"]
+                    target_ji  = val["ji"]
+                    log.info(f"[/heatwave-analyze] fallback bun 적용 ({key}) bun={target_bun} ji={target_ji}")
+                    break
 
         log.info(f"[/heatwave-analyze] 시작 | 지역={region_name} 코드={bjd_code} bun={target_bun} ji={target_ji}")
 
         # ── 병렬 데이터 수집 ──
         with ThreadPoolExecutor(max_workers=3) as ex:
             bldg_f = ex.submit(fetch_building_info, sigungu_cd, bjdong_cd, target_bun, target_ji)
-            heat_f = ex.submit(fetch_heatwave_data, region_name)
+            heat_f = ex.submit(fetch_heatwave_data, region_name, time_range)
             pop_f  = ex.submit(fetch_population_data, region_name)
             
             building = bldg_f.result()
