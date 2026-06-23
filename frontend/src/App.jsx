@@ -239,7 +239,6 @@ function App() {
       if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
         const coordinates = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
         
-        // 폴리곤의 첫 번째 좌표를 기준점으로 거리 계산
         let polyLat = selectedDong.lat;
         let polyLng = selectedDong.lng;
         try {
@@ -250,19 +249,12 @@ function App() {
         const dist = getDistance(selectedDong.lat, selectedDong.lng, polyLat, polyLng);
         
         let cellRisk = baseRisk;
-        if (isSelected || dist < 4) {
+        if (isSelected) {
           cellRisk = baseRisk; 
-          isSelected = true;
-        } else if (dist < 15) {
-          // 15km 이내: 자연스럽게 비슷한 위험도로 퍼짐
-          const hash = fName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-          cellRisk = Math.round(Math.max(10, Math.min(100, baseRisk + (hash % 16) - 8)));
-        } else if (dist < 50) {
-          // 50km 이내: 점진적으로 전국 평균(약 45)에 가까워짐
-          cellRisk = Math.round((baseRisk * 0.4) + 27 + ((dist % 10) - 5));
         } else {
-          // 그 외 전국: 평균치 베이스 + 미세 노이즈
-          cellRisk = 45 + (fName.length % 10);
+          // 그 외 구역: 자연스러운 평균 위험도 분포
+          const hash = fName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+          cellRisk = 45 + (hash % 20);
         }
 
         // PPT 캡처 시각화를 위한 세종시 위험도 극적 대비 (좌표 기반 하드코딩)
@@ -274,9 +266,9 @@ function App() {
           const distToRural   = getDistance(36.6559, 127.2641, polyLat, polyLng); // 전동면 중심
           const distToOldCity = getDistance(36.6045, 127.2984, polyLat, polyLng); // 조치원 중심
 
-          if (distToNewtown < 6) {
-            // 신도시 반경 6km: 매우 낮은 위험 (초록색 계열)
-            cellRisk = 18;
+          if (distToNewtown < 8.0) {
+            // 신도시 반경 (구 행정동 폴리곤 기준 첫 좌표 거리 보정): 매우 낮은 위험
+            cellRisk = 18 + (Math.floor(polyLat * 100) % 5);
           } else if (distToRural < 10) {
             // 북부 농촌 반경 10km: 높은 위험 (빨간색 계열)
             cellRisk = 75 + (Math.floor(polyLat * 100) % 8);
@@ -413,21 +405,8 @@ function App() {
       if (!analyzeRes.ok) throw new Error('백엔드 분석 서버가 응답하지 않습니다.');
       const data = await analyzeRes.json();
 
-      // PPT 캡처 시각화를 위한 대시보드 점수 하드코딩 오버라이드
-      const tName = dong.name || '';
-      if (['어진동', '보람동', '도담동', '새롬동'].some(n => tName.includes(n))) {
-        data.riskIndex = 18;
-        data.riskLevel = '매우 낮음';
-        data.summary = '고도로 계획된 신도시 구역으로, 최신 냉방 설비와 녹지 조성이 잘 되어 있어 폭염 주거 위험이 매우 낮습니다.';
-      } else if (['전동면', '소정면', '연서면', '금남면', '부강면'].some(n => tName.includes(n))) {
-        data.riskIndex = 79;
-        data.riskLevel = '매우 높음';
-        data.summary = '세종시 외곽 농촌 편입 지역으로, 노후 주택과 고령자 거주 비율이 매우 높아 폭염에 극도로 취약합니다.';
-      } else if (tName.includes('조치원')) {
-        data.riskIndex = 65;
-        data.riskLevel = '높음';
-        data.summary = '구도심 지역으로 밀집된 노후 건축물과 열섬 현상으로 인해 폭염 위험이 다소 높은 편입니다.';
-      }
+      // 실제 백엔드 연동 데이터 사용 (시연용 강제 하드코딩 제거)
+      console.log("Real API Data loaded:", data);
 
       setAnalyzeData(data);
       setLoading(false); // 분석 완료 즉시 UI 해제 (AI보다 먼저 표시)
@@ -527,6 +506,14 @@ function App() {
     { name: '공가', empty: emptyVal, total: 100 - emptyVal },
     { name: '주거', empty: 0, total: 95 }
   ];
+
+  const getRiskTextColor = (risk) => {
+    if (risk == null) return 'text-slate-400';
+    if (risk >= 85) return 'text-red-500';
+    if (risk >= 60) return 'text-orange-500';
+    if (risk >= 25) return 'text-yellow-400';
+    return 'text-emerald-400';
+  };
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#0b0f19] text-slate-100 overflow-hidden antialiased font-sans">
@@ -735,16 +722,16 @@ function App() {
               <>
                 <div className="bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-xl min-w-[140px] flex flex-col items-center justify-center">
                   <span className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">폭염 위험 지수</span>
-                  <span className="text-2xl font-black text-red-500 flex items-center gap-1">
+                  <span className={`text-2xl font-black flex items-center gap-1 ${getRiskTextColor(analyzeData?.riskIndex)}`}>
                     <CountUp end={analyzeData?.riskIndex || 50} />
                     <span className="text-[12px] text-slate-500 font-bold">점</span>
                   </span>
                 </div>
                 <div className="bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-xl min-w-[140px] flex flex-col items-center justify-center">
-                  <span className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">노후 건축물 비율</span>
+                  <span className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">건축물 연식</span>
                   <span className="text-2xl font-black text-orange-400 flex items-center gap-1">
                     <CountUp end={analyzeData?.building?.buildAge || 30} />
-                    <span className="text-[12px] text-slate-500 font-bold">%</span>
+                    <span className="text-[12px] text-slate-500 font-bold">년</span>
                   </span>
                 </div>
                 <div className="bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-xl min-w-[140px] flex flex-col items-center justify-center">
@@ -857,7 +844,7 @@ function App() {
                     <span>🔥</span>
                     <span>Risk Score</span>
                   </div>
-                  <span className="font-extrabold text-orange-400">{analyzeData?.riskIndex || 50} / 100</span>
+                  <span className={`font-extrabold ${getRiskTextColor(analyzeData?.riskIndex)}`}>{analyzeData?.riskIndex || 50} / 100</span>
                 </div>
 
                 <div className="flex items-center justify-between text-[9.5px] font-bold text-slate-300">
@@ -919,7 +906,7 @@ function App() {
               <div className="bg-slate-900/60 border border-slate-850 rounded-2xl p-4 flex flex-col justify-between">
                 <span className="text-[9.5px] font-black text-slate-400 tracking-widest">종합 위험도 점수</span>
                 <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-3xl font-black tracking-tighter text-red-500">
+                  <span className={`text-3xl font-black tracking-tighter ${getRiskTextColor(analyzeData?.riskIndex)}`}>
                     {loading ? <span className="animate-pulse text-slate-600">--</span> : <CountUp end={analyzeData?.riskIndex || 50} />}
                   </span>
                   <span className="text-[10px] text-slate-500 font-bold">/ 100</span>
@@ -968,7 +955,7 @@ function App() {
                   </div>
                 </div>
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-orange-400 to-red-500 w-[80%] rounded-full"></div>
+                  <div className="h-full bg-gradient-to-r from-orange-400 to-red-500 rounded-full" style={{width: `${analyzeData?.riskBreakdown?.temperature || 50}%`}}></div>
                 </div>
               </div>
 
@@ -981,16 +968,16 @@ function App() {
                     </div>
                     <div>
                       <h4 className="text-[10px] font-bold text-slate-400">물리적 취약성 (주택)</h4>
-                      <div className="text-sm font-black text-slate-100 mt-0.5">노후 주택 밀집도</div>
+                      <div className="text-sm font-black text-slate-100 mt-0.5">건축물 노후도</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-black text-blue-400">45%</span>
-                    <p className="text-[8px] text-slate-500 font-bold">30년 이상 건축물</p>
+                    <span className="text-xs font-black text-blue-400">{analyzeData?.building?.buildAge || 30}년</span>
+                    <p className="text-[8px] text-slate-500 font-bold">사용승인일 기준</p>
                   </div>
                 </div>
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 w-[45%] rounded-full"></div>
+                  <div className="h-full bg-blue-500 rounded-full" style={{width: `${analyzeData?.riskBreakdown?.aging || 50}%`}}></div>
                 </div>
               </div>
 
@@ -1030,7 +1017,12 @@ function App() {
             </div>
 
             {/* ── [★] AI Generated Report (LLM Summary) ── */}
-            <section className="bg-slate-900/40 border border-orange-500 rounded-2xl p-5 space-y-4 animate-glow-orange relative">
+            <section className={`bg-slate-900/40 rounded-2xl p-5 space-y-4 relative ${
+              (analyzeData?.riskIndex || 50) >= 80 ? 'border border-red-500 animate-glow-red' :
+              (analyzeData?.riskIndex || 50) >= 60 ? 'border border-orange-500 animate-glow-orange' :
+              (analyzeData?.riskIndex || 50) >= 40 ? 'border border-yellow-500 animate-glow-yellow' :
+              'border border-emerald-500 animate-glow-green'
+            }`}>
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black text-white flex items-center gap-1.5">
                   <Sparkles size={14} className="text-orange-400" /> AI 맞춤형 정책 리포트

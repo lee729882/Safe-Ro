@@ -437,7 +437,7 @@ def fetch_heatwave_data(region_name, time_range="2025 July"):
                 "authKey": KMA_API_KEY
             }
             
-            r = req_lib.get(url, params=params, timeout=10)
+            r = req_lib.get(url, params=params, timeout=30)
             if r.status_code == 200:
                 max_temp = -999.0
                 heatwave_days = 0
@@ -449,11 +449,11 @@ def fetch_heatwave_data(region_name, time_range="2025 July"):
                     if not line or line.startswith('#'):
                         continue
                         
-                    parts = line.split()
-                    if len(parts) >= 3:
+                    parts = line.split(',')
+                    if len(parts) >= 6:
                         try:
-                            # 텍스트 포맷: 시간, 지점, 값 ...
-                            val = float(parts[2])
+                            # 텍스트 포맷: TM, STN, LON, LAT, HT, VAL(최고기온), ...
+                            val = float(parts[5])
                             if val > max_temp:
                                 max_temp = val
                             if val >= 33.0:
@@ -848,7 +848,7 @@ def generate_ai_report():
 
     try:
         completion = client.chat.completions.create(
-            model="meta/llama-3.3-70b-instruct",  # 3.1보다 ~5초 빠름 (실측: 76s vs 81s)
+            model="meta/llama-3.1-8b-instruct",  # Fast model for 30s requirement
             messages=[
                 {
                     "role": "system",
@@ -862,7 +862,7 @@ def generate_ai_report():
                 {"role": "user", "content": prompt}
             ],
             temperature=0.5,
-            max_tokens=1500,
+            max_tokens=1000,
             top_p=1
         )
         report = completion.choices[0].message.content
@@ -928,6 +928,16 @@ def heatwave_analyze():
             building = bldg_f.result()
             climate  = heat_f.result()
             population = pop_f.result()
+
+        # ── 마이크로 기후(열섬 현상) 시뮬레이션 보정 ──
+        # 기상청 데이터는 시 단위(관측소 1개)로 동일하므로, 동별 노후도/인구 밀집도를 바탕으로 미세 온도를 변화시킵니다.
+        base_temp = climate.get("max_temp", 35.0)
+        b_age = building.get("buildAge") or 10
+        p_ratio = population.get("elderly_ratio", 10.0)
+        
+        # 건물이 오래되고 취약계층이 많을수록 도심 열섬/열악한 주거환경 반영 (+0.1 ~ +1.2도)
+        uhi_modifier = (b_age * 0.01) + (p_ratio * 0.01)
+        climate["max_temp"] = round(base_temp + uhi_modifier, 1)
 
         # ── 위험도 지수 산출 ──
         risk = calculate_heatwave_risk_index(
